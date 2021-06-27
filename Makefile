@@ -1,169 +1,96 @@
-MAKEFLAGS+=-r -j
+# -*- Makefile -*- for meshoptimizer
 
-config=debug
-files=demo/pirate.obj
+.SECONDEXPANSION:
+.SUFFIXES:
 
-BUILD=build/$(config)
-
-LIBRARY_SOURCES=$(wildcard src/*.cpp)
-LIBRARY_OBJECTS=$(LIBRARY_SOURCES:%=$(BUILD)/%.o)
-
-DEMO_SOURCES=$(wildcard demo/*.c demo/*.cpp) tools/meshloader.cpp
-DEMO_OBJECTS=$(DEMO_SOURCES:%=$(BUILD)/%.o)
-
-GLTFPACK_SOURCES=$(wildcard gltf/*.cpp) tools/meshloader.cpp
-GLTFPACK_OBJECTS=$(GLTFPACK_SOURCES:%=$(BUILD)/%.o)
-
-OBJECTS=$(LIBRARY_OBJECTS) $(DEMO_OBJECTS) $(GLTFPACK_OBJECTS)
-
-LIBRARY=$(BUILD)/libmeshoptimizer.a
-EXECUTABLE=$(BUILD)/meshoptimizer
-
-CFLAGS=-g -Wall -Wextra -Werror -std=c89
-CXXFLAGS=-g -Wall -Wextra -Wshadow -Wno-missing-field-initializers -Werror -std=c++98
-LDFLAGS=
-
-$(GLTFPACK_OBJECTS): CXXFLAGS+=-std=c++11
-
-WASMCC=clang++
-WASI_SDK=
-
-WASM_FLAGS=--target=wasm32-wasi --sysroot=$(WASI_SDK)
-WASM_FLAGS+=-O3 -DNDEBUG -nostartfiles -nostdlib -Wl,--no-entry -Wl,-s
-WASM_FLAGS+=-Wl,-z -Wl,stack-size=24576 -Wl,--initial-memory=65536
-WASM_EXPORT_PREFIX=-Wl,--export
-
-WASM_DECODER_SOURCES=src/vertexcodec.cpp src/indexcodec.cpp src/vertexfilter.cpp tools/wasmstubs.cpp
-WASM_DECODER_EXPORTS=meshopt_decodeVertexBuffer meshopt_decodeIndexBuffer meshopt_decodeIndexSequence meshopt_decodeFilterOct meshopt_decodeFilterQuat meshopt_decodeFilterExp sbrk __wasm_call_ctors
-
-WASM_ENCODER_SOURCES=src/vertexcodec.cpp src/indexcodec.cpp src/vertexfilter.cpp src/vcacheoptimizer.cpp src/vfetchoptimizer.cpp tools/wasmstubs.cpp
-WASM_ENCODER_EXPORTS=meshopt_encodeVertexBuffer meshopt_encodeVertexBufferBound meshopt_encodeIndexBuffer meshopt_encodeIndexBufferBound meshopt_encodeIndexSequence meshopt_encodeIndexSequenceBound meshopt_encodeVertexVersion meshopt_encodeIndexVersion meshopt_encodeFilterOct meshopt_encodeFilterQuat meshopt_encodeFilterExp meshopt_optimizeVertexCache meshopt_optimizeVertexCacheStrip meshopt_optimizeVertexFetchRemap sbrk __wasm_call_ctors
-
-WASM_SIMPLIFIER_SOURCES=src/simplifier.cpp tools/wasmstubs.cpp
-WASM_SIMPLIFIER_EXPORTS=meshopt_simplify meshopt_simplifySloppy meshopt_simplifyPoints sbrk __wasm_call_ctors
-
-ifeq ($(config),iphone)
-	IPHONESDK=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk
-	CFLAGS+=-arch armv7 -arch arm64 -isysroot $(IPHONESDK)
-	CXXFLAGS+=-arch armv7 -arch arm64 -isysroot $(IPHONESDK) -stdlib=libc++
-	LDFLAGS+=-arch armv7 -arch arm64 -isysroot $(IPHONESDK) -L $(IPHONESDK)/usr/lib -mios-version-min=7.0
+ifneq ($(findstring $(MAKEFLAGS),s),s)
+ifndef V
+        QUIET          = @
+        QUIET_CXX      = @echo '   ' CXX $<;
+        QUIET_AR       = @echo '   ' AR $@;
+        QUIET_RANLIB   = @echo '   ' RANLIB $@;
+        QUIET_INSTALL  = @echo '   ' INSTALL $<;
+        export V
+endif
 endif
 
-ifeq ($(config),trace)
-	CXXFLAGS+=-DTRACE=1
+LIB      = libmeshoptimizer.a
+AR      ?= ar
+ARFLAGS ?= rc
+CXX     ?= g++
+RANLIB  ?= ranlib
+RM      ?= rm -f
+
+BUILD_DIR := obj
+BUILD_ID  ?= default-build-id
+OBJ_DIR   := $(BUILD_DIR)/$(BUILD_ID)
+
+ifeq (,$(BUILD_ID))
+$(error BUILD_ID cannot be an empty string)
 endif
 
-ifeq ($(config),scalar)
-	CXXFLAGS+=-O3 -DNDEBUG -DMESHOPTIMIZER_NO_SIMD
-endif
+prefix ?= /usr/local
+libdir := $(prefix)/lib
+includedir := $(prefix)/include
 
-ifeq ($(config),release)
-	CXXFLAGS+=-O3 -DNDEBUG
-endif
+CXXFLAGS ?= -O2
+CXXFLAGS += -I$(includedir)
 
-ifeq ($(config),coverage)
-	CXXFLAGS+=-coverage
-	LDFLAGS+=-coverage
-endif
+HEADERS = \
+	src/meshoptimizer.h \
 
-ifeq ($(config),sanitize)
-	CXXFLAGS+=-fsanitize=address,undefined -fno-sanitize-recover=all
-	LDFLAGS+=-fsanitize=address,undefined
-endif
+SOURCES = \
+	src/*.cpp \
 
-ifeq ($(config),analyze)
-	CXXFLAGS+=--analyze
-endif
+SOURCES := $(wildcard $(SOURCES))
 
-all: $(EXECUTABLE)
+HEADERS_INST := $(patsubst src/%,$(includedir)/%,$(HEADERS))
+OBJECTS := $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(SOURCES))
 
-test: $(EXECUTABLE)
-	$(EXECUTABLE) $(files)
+.PHONY: install
 
-check: $(EXECUTABLE)
-	$(EXECUTABLE)
+all: $(OBJ_DIR)/$(LIB)
 
-dev: $(EXECUTABLE)
-	$(EXECUTABLE) -d $(files)
+$(includedir)/%.h: src/%.h
+	-@if [ ! -d $(includedir)  ]; then mkdir -p $(includedir); fi
+	$(QUIET_INSTALL)cp $< $@
+	@chmod 0644 $@
 
-format:
-	clang-format -i $(LIBRARY_SOURCES) $(DEMO_SOURCES) $(GLTFPACK_SOURCES)
+$(libdir)/%.a: $(OBJ_DIR)/%.a
+	-@if [ ! -d $(libdir)  ]; then mkdir -p $(libdir); fi
+	$(QUIET_INSTALL)cp $< $@
+	@chmod 0644 $@
 
-js: js/meshopt_decoder.js js/meshopt_decoder.module.js js/meshopt_encoder.js js/meshopt_encoder.module.js js/meshopt_simplifier.js js/meshopt_simplifier.module.js
-
-gltfpack: $(GLTFPACK_OBJECTS) $(LIBRARY)
-	$(CXX) $^ $(LDFLAGS) -o $@
-
-gltfpack.wasm: gltf/library.wasm
-
-gltf/library.wasm: ${LIBRARY_SOURCES} ${GLTFPACK_SOURCES} tools/meshloader.cpp
-	$(WASMCC) $^ -o $@ -Os -DNDEBUG --target=wasm32-wasi --sysroot=$(WASI_SDK) -nostartfiles -Wl,--no-entry -Wl,--export=pack -Wl,--export=malloc -Wl,--export=free -Wl,--export=__wasm_call_ctors -Wl,-s -Wl,--allow-undefined-file=gltf/wasistubs.txt
-
-build/decoder_base.wasm: $(WASM_DECODER_SOURCES)
-	@mkdir -p build
-	$(WASMCC) $^ $(WASM_FLAGS) $(patsubst %,$(WASM_EXPORT_PREFIX)=%,$(WASM_DECODER_EXPORTS)) -o $@
-
-build/decoder_simd.wasm: $(WASM_DECODER_SOURCES)
-	@mkdir -p build
-	$(WASMCC) $^ $(WASM_FLAGS) $(patsubst %,$(WASM_EXPORT_PREFIX)=%,$(WASM_DECODER_EXPORTS)) -o $@ -msimd128 -mbulk-memory
-
-js/meshopt_decoder.js: build/decoder_base.wasm build/decoder_simd.wasm
-	sed -i "s#Built with clang.*#Built with $$($(WASMCC) --version | head -n 1)#" $@
-	sed -i "s#\(var wasm_base = \)\".*\";#\\1\"$$(cat build/decoder_base.wasm | python3 tools/wasmpack.py)\";#" $@
-	sed -i "s#\(var wasm_simd = \)\".*\";#\\1\"$$(cat build/decoder_simd.wasm | python3 tools/wasmpack.py)\";#" $@
-
-build/encoder.wasm: $(WASM_ENCODER_SOURCES)
-	@mkdir -p build
-	$(WASMCC) $^ $(WASM_FLAGS) $(patsubst %,$(WASM_EXPORT_PREFIX)=%,$(WASM_ENCODER_EXPORTS)) -lc -o $@
-
-js/meshopt_encoder.js: build/encoder.wasm
-	sed -i "s#Built with clang.*#Built with $$($(WASMCC) --version | head -n 1)#" $@
-	sed -i "s#\(var wasm = \)\".*\";#\\1\"$$(cat build/encoder.wasm | python3 tools/wasmpack.py)\";#" $@
-
-build/simplifier.wasm: $(WASM_SIMPLIFIER_SOURCES)
-	@mkdir -p build
-	$(WASMCC) $^ $(WASM_FLAGS) $(patsubst %,$(WASM_EXPORT_PREFIX)=%,$(WASM_SIMPLIFIER_EXPORTS)) -lc -o $@
-
-js/meshopt_simplifier.js: build/simplifier.wasm
-	sed -i "s#Built with clang.*#Built with $$($(WASMCC) --version | head -n 1)#" $@
-	sed -i "s#\(var wasm = \)\".*\";#\\1\"$$(cat build/simplifier.wasm | python3 tools/wasmpack.py)\";#" $@
-
-js/%.module.js: js/%.js
-	sed '/UMD-style export/,$$d' <$< >$@
-	sed -n "s#\s*module.exports = \(.*\);#export { \\1 };#p" <$< >>$@
-
-$(EXECUTABLE): $(DEMO_OBJECTS) $(LIBRARY)
-	$(CXX) $^ $(LDFLAGS) -o $@
-
-vcachetuner: tools/vcachetuner.cpp $(BUILD)/tools/meshloader.cpp.o $(BUILD)/demo/miniz.cpp.o $(LIBRARY)
-	$(CXX) $^ -fopenmp $(CXXFLAGS) -std=c++11 $(LDFLAGS) -o $@
-
-codecbench: tools/codecbench.cpp $(LIBRARY)
-	$(CXX) $^ $(CXXFLAGS) $(LDFLAGS) -o $@
-
-codecbench.js codecbench.wasm: tools/codecbench.cpp ${LIBRARY_SOURCES}
-	emcc $^ -O3 -g -DNDEBUG -s TOTAL_MEMORY=268435456 -o $@
-
-codecbench-simd.js codecbench-simd.wasm: tools/codecbench.cpp ${LIBRARY_SOURCES}
-	emcc $^ -O3 -g -DNDEBUG -s TOTAL_MEMORY=268435456 -msimd128 -o $@
-
-codecfuzz: tools/codecfuzz.cpp src/vertexcodec.cpp src/indexcodec.cpp
-	$(CXX) $^ -fsanitize=fuzzer,address,undefined -O1 -g -o $@
-
-$(LIBRARY): $(LIBRARY_OBJECTS)
-	ar rcs $@ $^
-
-$(BUILD)/%.cpp.o: %.cpp
-	@mkdir -p $(dir $@)
-	$(CXX) $< $(CXXFLAGS) -c -MMD -MP -o $@
-
-$(BUILD)/%.c.o: %.c
-	@mkdir -p $(dir $@)
-	$(CC) $< $(CFLAGS) -c -MMD -MP -o $@
-
--include $(OBJECTS:.o=.d)
+install: $(HEADERS_INST) $(libdir)/$(LIB)
 
 clean:
-	rm -rf $(BUILD)
+	$(RM) -r $(OBJ_DIR)
 
-.PHONY: all clean format
+distclean: clean
+	$(RM) -r $(BUILD_DIR)
+
+$(OBJ_DIR)/$(LIB): $(OBJECTS)
+	$(QUIET_AR)$(AR) $(ARFLAGS) $@ $^
+	$(QUIET_RANLIB)$(RANLIB) $@
+
+$(OBJ_DIR)/%.o: %.cpp $(OBJ_DIR)/.cflags | $$(@D)/.
+	$(QUIET_CXX)$(CXX) $(CXXFLAGS) -o $@ -c $<
+
+.PRECIOUS: $(OBJ_DIR)/. $(OBJ_DIR)%/.
+
+$(OBJ_DIR)/.:
+	$(QUIET)mkdir -p $@
+
+$(OBJ_DIR)%/.:
+	$(QUIET)mkdir -p $@
+
+TRACK_CFLAGS = $(subst ','\'',$(CXX) $(CXXFLAGS))
+
+$(OBJ_DIR)/.cflags: .force-cflags | $$(@D)/.
+	@FLAGS='$(TRACK_CFLAGS)'; \
+    if test x"$$FLAGS" != x"`cat $(OBJ_DIR)/.cflags 2>/dev/null`" ; then \
+        echo "    * rebuilding meshoptimizer: new build flags or prefix"; \
+        echo "$$FLAGS" > $(OBJ_DIR)/.cflags; \
+    fi
+
+.PHONY: .force-cflags
