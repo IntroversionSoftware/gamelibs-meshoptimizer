@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|ARM64">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM64">
+      <Configuration>Release</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{716d2b9e-2e51-4059-b4d2-38d3bf561ddd}</ProjectGuid>
+    <RootNamespace>meshoptimizer</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <ImportGroup Label="PropertySheets">
+    <Import Project="..\..\Toolset.props" />
+  </ImportGroup>
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\Master.props" />
+  </ImportGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\allocator.cpp" />
+    <ClCompile Include="..\src\clusterizer.cpp" />
+    <ClCompile Include="..\src\indexcodec.cpp" />
+    <ClCompile Include="..\src\indexgenerator.cpp" />
+    <ClCompile Include="..\src\overdrawanalyzer.cpp" />
+    <ClCompile Include="..\src\overdrawoptimizer.cpp" />
+    <ClCompile Include="..\src\quantization.cpp" />
+    <ClCompile Include="..\src\simplifier.cpp" />
+    <ClCompile Include="..\src\spatialorder.cpp" />
+    <ClCompile Include="..\src\stripifier.cpp" />
+    <ClCompile Include="..\src\vcacheanalyzer.cpp" />
+    <ClCompile Include="..\src\vcacheoptimizer.cpp" />
+    <ClCompile Include="..\src\vertexcodec.cpp" />
+    <ClCompile Include="..\src\vertexfilter.cpp" />
+    <ClCompile Include="..\src\vfetchanalyzer.cpp" />
+    <ClCompile Include="..\src\vfetchoptimizer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\meshoptimizer.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
