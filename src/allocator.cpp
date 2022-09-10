@@ -9,7 +9,7 @@ meshopt_Allocator::Storage& meshopt_Allocator::storage()
 }
 #endif
 
-void meshopt_setAllocator(void* (MESHOPTIMIZER_ALLOC_CALLCONV* allocate)(size_t), void (MESHOPTIMIZER_ALLOC_CALLCONV* deallocate)(void*))
+void meshopt_setAllocator(meshopt_alloc_t allocate, meshopt_dealloc_t deallocate)
 {
 	meshopt_Allocator::Storage& s = meshopt_Allocator::storage();
 	s.allocate = allocate;
