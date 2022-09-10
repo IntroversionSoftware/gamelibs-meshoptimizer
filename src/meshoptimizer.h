@@ -28,6 +28,9 @@
 #endif
 #endif
 
+/* IV: Always enable this for our code. */
+#define MESHOPTIMIZER_ALLOC_EXPORT
+
 /* Experimental APIs have unstable interface and might have implementation that's not fully tested or optimized */
 #ifndef MESHOPTIMIZER_EXPERIMENTAL
 #define MESHOPTIMIZER_EXPERIMENTAL MESHOPTIMIZER_API
@@ -38,6 +41,9 @@
 extern "C"
 {
 #endif
+
+typedef void* (MESHOPTIMIZER_ALLOC_CALLCONV *meshopt_alloc_t)(size_t);
+typedef void (MESHOPTIMIZER_ALLOC_CALLCONV *meshopt_dealloc_t)(void*);
 
 /**
  * Vertex attribute stream
@@ -878,7 +884,7 @@ MESHOPTIMIZER_API float meshopt_dequantizeHalf(unsigned short h);
  * Note that all algorithms only allocate memory for temporary use.
  * allocate/deallocate are always called in a stack-like order - last pointer to be allocated is deallocated first.
  */
-MESHOPTIMIZER_API void meshopt_setAllocator(void* (MESHOPTIMIZER_ALLOC_CALLCONV* allocate)(size_t), void (MESHOPTIMIZER_ALLOC_CALLCONV* deallocate)(void*));
+MESHOPTIMIZER_API void meshopt_setAllocator(meshopt_alloc_t, meshopt_dealloc_t);
 
 #ifdef __cplusplus
 } /* extern "C" */
@@ -1025,8 +1031,8 @@ class meshopt_Allocator
 public:
 	struct Storage
 	{
-		void* (MESHOPTIMIZER_ALLOC_CALLCONV* allocate)(size_t);
-		void (MESHOPTIMIZER_ALLOC_CALLCONV* deallocate)(void*);
+		meshopt_alloc_t allocate;
+		meshopt_dealloc_t deallocate;
 	};
 
 #ifdef MESHOPTIMIZER_ALLOC_EXPORT
