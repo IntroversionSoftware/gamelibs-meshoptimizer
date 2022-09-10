@@ -725,17 +725,17 @@ inline int meshopt_quantizeSnorm(float v, int N)
 
 /* Internal implementation helpers */
 #ifdef __cplusplus
+typedef void* (MESHOPTIMIZER_ALLOC_CALLCONV *meshopt_alloc_t)(size_t);
+typedef void (MESHOPTIMIZER_ALLOC_CALLCONV *meshopt_dealloc_t)(void*);
+
 class meshopt_Allocator
 {
 public:
-	template <typename T>
-	struct StorageT
+	struct Storage
 	{
-		static void* (MESHOPTIMIZER_ALLOC_CALLCONV *allocate)(size_t);
-		static void (MESHOPTIMIZER_ALLOC_CALLCONV *deallocate)(void*);
+		static meshopt_alloc_t allocate;
+		static meshopt_dealloc_t deallocate;
 	};
-
-	typedef StorageT<void> Storage;
 
 	meshopt_Allocator()
 		: blocks()
@@ -768,10 +768,6 @@ private:
 	void* blocks[24];
 	size_t count;
 };
-
-// This makes sure that allocate/deallocate are lazily generated in translation units that need them and are deduplicated by the linker
-template <typename T> void* (MESHOPTIMIZER_ALLOC_CALLCONV *meshopt_Allocator::StorageT<T>::allocate)(size_t) = operator new;
-template <typename T> void (MESHOPTIMIZER_ALLOC_CALLCONV *meshopt_Allocator::StorageT<T>::deallocate)(void*) = operator delete;
 #endif
 
 /* Inline implementation for C++ templated wrappers */
