@@ -66,7 +66,7 @@ install: $(HEADERS_INST) $(libdir)/$(LIB)
 clean:
 	$(RM) -r $(OBJ_DIR)
 
-distclean: clean
+distclean:
 	$(RM) -r $(BUILD_DIR)
 
 $(OBJ_DIR)/$(LIB): $(OBJECTS)
