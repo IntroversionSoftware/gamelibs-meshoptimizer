@@ -5,19 +5,19 @@ incdirs = ['src']
 sources = [
 	'src/allocator.cpp',
 	'src/clusterizer.cpp',
+	'src/indexanalyzer.cpp',
 	'src/indexcodec.cpp',
 	'src/indexgenerator.cpp',
-	'src/overdrawanalyzer.cpp',
 	'src/overdrawoptimizer.cpp',
+	'src/partition.cpp',
 	'src/quantization.cpp',
+	'src/rasterizer.cpp',
 	'src/simplifier.cpp',
 	'src/spatialorder.cpp',
 	'src/stripifier.cpp',
-	'src/vcacheanalyzer.cpp',
 	'src/vcacheoptimizer.cpp',
 	'src/vertexcodec.cpp',
 	'src/vertexfilter.cpp',
-	'src/vfetchanalyzer.cpp',
 	'src/vfetchoptimizer.cpp',
 ]
 
